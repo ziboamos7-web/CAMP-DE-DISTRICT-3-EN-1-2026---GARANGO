@@ -4281,7 +4281,7 @@ render()})();
     </div>
 
 
-    <button type="button" class="plus-logout" onclick="plusLogout()">
+    <button type="button" class="plus-logout camp-logout-visible" onclick="window.campLogout ? window.campLogout() : plusLogout()" aria-label="Se déconnecter">
       <span class="plus-icon"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-out"/></svg></span>
       <span><b>Se déconnecter</b><small>Fermer ma session sur cet appareil</small></span>
       <i class="logout-arrow"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chev-r"/></svg></i>
@@ -4330,6 +4330,19 @@ render()})();
 #screenPlus .plus-logout small{display:block;font-size:12px;margin-top:3px;color:#ad5555}
 #screenPlus .plus-logout>span:nth-child(2){flex:1;min-width:0}
 #screenPlus .plus-logout .logout-arrow{font-size:20px;color:#c92f3d;font-style:normal}
+#screenPlus .camp-logout-visible{
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  position:relative;
+  z-index:5;
+  margin-bottom:18px;
+}
+#screenPlus .camp-logout-visible:focus-visible{
+  outline:3px solid rgba(201,47,61,.28);
+  outline-offset:3px;
+}
+
 </style>
 
 <div class="registration-overlay" id="registrationOverlay" aria-hidden="true" onclick="closeRegistration(event)">
@@ -6885,20 +6898,31 @@ document.addEventListener('DOMContentLoaded',render);window.addEventListener('lo
     var lo=$('authLogout');if(lo)lo.classList.toggle('show',!!acc);
   }
   window.campLogout=function(){
-    /* Point unique de déconnexion : le compte reste enregistré, mais la session et
-       les données de participation propres à la session sont retirées. */
+    /* Déconnexion réelle : fermeture de la session locale ET de la session Supabase.
+       Après confirmation, l'utilisateur revient directement à l'écran Connexion. */
+    var finish=function(){
+      try{
+        [SES,REG,'camp_registration_draft','camp_registration_draft_2026','camp_avatar','camp_cover','camp_cover_src','camp_cover_t'].forEach(function(k){
+          try{localStorage.removeItem(k)}catch(e){}
+        });
+        try{localStorage.setItem('camp_was_out','1')}catch(e){}
+      }catch(e){}
+      try{window.dispatchEvent(new Event('storage'))}catch(e){}
+      try{if(window.closeRegistration)closeRegistration()}catch(e){}
+      paintProfile();
+      try{document.documentElement.classList.add('camp-gate')}catch(e){}
+      try{if(window.showAppTab)showAppTab('home')}catch(e){}
+      try{if(window.openAuth)window.openAuth('login')}catch(e){}
+      try{toast('Tu es déconnecté.')}catch(e){}
+      try{window.cdFx&&cdFx('logout')}catch(e){}
+    };
     try{
-      [SES,REG,'camp_registration_draft','camp_registration_draft_2026','camp_avatar','camp_cover','camp_cover_src','camp_cover_t'].forEach(function(k){
-        try{localStorage.removeItem(k)}catch(e){}
-      });
-      try{localStorage.setItem('camp_was_out','1')}catch(e){}
+      if(window.CampBackend&&typeof window.CampBackend.signOut==='function'){
+        Promise.resolve(window.CampBackend.signOut()).then(finish).catch(finish);
+        return;
+      }
     }catch(e){}
-    try{window.dispatchEvent(new Event('storage'))}catch(e){}
-    try{if(window.closeRegistration)closeRegistration()}catch(e){}
-    try{if(window.showAppTab)showAppTab('plus')}catch(e){}
-    paintProfile();
-    try{toast('Tu es déconnecté.')}catch(e){}
-    try{window.cdFx&&cdFx('logout')}catch(e){}
+    finish();
   };
 
   /* ---------- connexion ---------- */
@@ -11866,6 +11890,11 @@ html.v187-calm *,html.v187-calm *::before,html.v187-calm *::after{animation:none
 #v190Plus{display:none!important}
 #screenPlus>#v193Plus{display:block!important;min-height:100%}
 #v193Plus{--st:env(safe-area-inset-top,0px);color:#14141f}
+#v193Plus{padding-bottom:150px!important}
+#v193Plus .p-logout-row{color:#a92832!important;border-top:1px solid #f0f0f5}
+#v193Plus .p-logout-row i{background:#c92f3d!important}
+#v193Plus .p-logout-row b{color:#a92832!important}
+#v193Plus .p-logout-row small{color:#b96a70!important}
 .p-hero{--p:0;position:sticky;top:-196px;z-index:6;height:calc(260px + var(--st));overflow:hidden;color:#fff}
 .p-cv{position:absolute;inset:-24px;background:linear-gradient(120deg,#ff8f22,#c2185b 55%,#4527a0) center/cover no-repeat;filter:blur(calc(var(--p)*14px));transform:scale(calc(1 + var(--p)*.05))}
 .p-ov{position:absolute;inset:0;background:rgba(15,8,45,calc(.2 + var(--p)*.5))}
@@ -11974,14 +12003,14 @@ html.v187-calm *,html.v187-calm *::before,html.v187-calm *::after{animation:none
   var sub=d?([d.Phone?'+225 '+String(d.Phone).replace(/^\+?225/,'').trim():'',d.Group||''].filter(Boolean).join(' • ')):'Touche pour te pré-inscrire';
   var dl=Math.ceil((new Date(2026,9,28)-new Date())/864e5),cd=dl>0?'J-'+dl+' · 28 oct. → 1er nov.':(new Date()<new Date(2026,10,2)?'Camp en cours':'Camp terminé');
   var nck=ck().length;
-  function it(k,ic,col,t,s,go){M[k]=[ic,col,t,s];return '<div class="p-it" data-k="'+k+'"><button type="button" class="p-row" data-a="'+k+'"><i style="background:'+col+'">'+sv(ic)+'</i><span class="t"><b>'+t+'</b><small>'+s+'</small></span><em class="p-ch">'+sv('arr')+'</em></button></div>'}
+  function it(k,ic,col,t,s,go){M[k]=[ic,col,t,s];return '<div class="p-it" data-k="'+k+'"><button type="button" class="p-row'+(k==='logout'?' p-logout-row':'')+'" data-a="'+k+'"><i style="background:'+col+'">'+sv(ic)+'</i><span class="t"><b>'+t+'</b><small>'+s+'</small></span><em class="p-ch">'+sv('arr')+'</em></button></div>'}
   function sec(l,a,dl){return '<div class="p-lb">'+l+'</div><div class="p-card" style="animation-delay:'+dl+'ms">'+a.join('')+'</div>'}
   root.className=first?'pfx':'';first=false;
   root.innerHTML='<div class="p-hero" id="pHero"><div class="p-cv" style="'+(cv?'background-image:url('+cv+')':'')+'"></div><div class="p-ov" data-c="viewcv"></div><div class="p-av" data-c="viewav" style="'+(av?'background-image:url('+av+');font-size:0':'')+'">'+esc(ini)+'<button type="button" class="p-cam" data-c="avadd" aria-label="Changer ma photo de profil">'+sv('cam')+'</button></div><h2 class="p-nm" data-c="reg">'+esc(nm)+'</h2><p class="p-sb">'+esc(sub)+'</p><p class="p-tag">Ensemble<br>pour un meilleur camp !</p></div>'
   +'<div class="p-body">'
   +sec('MON CAMP',[it('reg','user','#2b8cf0','Ma pré-inscription',d?'Voir mes informations':'Pas encore pré-inscrit(e)'),d?it('tk','tk','#7c4dff','Mon ticket','Titulaire et QR code'):'',it('agenda','cal','#5b6ee1','Mon agenda','Mes rendez-vous du Camp',1),it('lieu','pin','#e5484d','Lieu & dates',cd)],0)
   +sec('DÉCOUVRIR',[it('prog','list','#3a56d4','Programme du Camp','Activités et horaires'),it('news','news','#f08a1c','Actualités','Les dernières informations',1),it('gal',galOn()?'gal':'lock',galOn()?'#a259e6':'#a9a9bb','Galerie',galOn()?'Photos du Camp':'Disponible pendant le Camp'),it('frame','img','#e8a317','Ma photo du Camp','Cadre photo à partager')],70)
-  +sec('PRATIQUE',[it('chk','bag','#34a853','À emporter',nck+' / '+CK.length+' prêts'),it('share','share','#0ea5a4','Inviter un ami','Code promo · avantages dès 10 inscrits'),it('help','head','#1fb5a8','Contact & Assistance','Appeler ou écrire'),it('set','set','#8e5be8','Paramètres','Réglages et couverture')],140)
+  +sec('PRATIQUE',[it('chk','bag','#34a853','À emporter',nck+' / '+CK.length+' prêts'),it('share','share','#0ea5a4','Inviter un ami','Code promo · avantages dès 10 inscrits'),it('help','head','#1fb5a8','Contact & Assistance','Appeler ou écrire'),it('set','set','#8e5be8','Paramètres','Réglages et couverture'),it('logout','out','#c92f3d','Se déconnecter','Fermer ma session sur cet appareil')],140)
   +'<div class="p-sig"><b>Camp de District 3 en 1</b>Garango 2026 · 5 jours · 1 expérience · 1 communauté</div></div>';
   hero=root.querySelector('#pHero');sync()}
  function sync(){if(!hero)return;var a=hero.getBoundingClientRect().top,b=scr.getBoundingClientRect().top;hero.style.setProperty('--p',Math.max(0,Math.min(1,(b-a)/Math.max(1,-parseFloat(getComputedStyle(hero).top)||196))).toFixed(3))}
@@ -12022,7 +12051,7 @@ html.v187-calm *,html.v187-calm *::before,html.v187-calm *::after{animation:none
   cvdel:function(){try{localStorage.removeItem('camp_cover');localStorage.removeItem('camp_cover_src');localStorage.removeItem('camp_cover_t')}catch(e){}refresh();toast('Couverture retirée')},
   vib:function(){var on=(LS('camp_set_vibr')||'1')!=='1';SS('camp_set_vibr',on?'1':'0');if(on&&navigator.vibrate)navigator.vibrate(30);refresh()},
   calm:function(){var on=LS('camp_set_calm')!=='1';SS('camp_set_calm',on?'1':'0');document.documentElement.classList.toggle('v187-calm',on);refresh()},
-  logout:function(){},
+  logout:function(){sheet()},
   viewcv:function(){var c=H().cover&&H().cover();if(c)view(c)},
   viewav:function(){var c=H().avatar&&H().avatar();if(c)view(c)},
   wipe:function(){if(confirm('Effacer ta pré-inscription et ton ticket de cet appareil ?')){try{localStorage.removeItem('camp_registration_2026');localStorage.removeItem('camp_registration_draft')}catch(e){}location.reload()}},
@@ -12523,12 +12552,12 @@ html.v187-calm *,html.v187-calm *::before,html.v187-calm *::after{animation:none
   busy=true;var salt=rnd();hash(pw,salt).then(function(h){busy=false;
    var acc={phone:ph,first:fi,last:la,Name:fi+' '+la,Phone:v('phone').trim(),Email:em,Group:di,Church:'',Pass:'',salt:salt,pw:h,ts:Date.now()};
    (window.campVerifyEmail||function(a,b,c){c()})(em,fi,function(){L.push(acc);wr(ACC,L);go(acc);try{window.campFirstRecap&&campFirstRecap()}catch(e){}toast('Compte créé. Bienvenue au Camp !')})})}
- window.openAuth=function(m){if(session())return;open('signup')};window.closeAuth=function(){if(session())close()};window.campGateOpen=function(){if(!session())open('signup')};
+ window.openAuth=function(m){if(session())return;open(m||'login')};window.closeAuth=function(){if(session())close()};window.campGateOpen=function(){if(!session())open('login')};
  var oo=window.openRegistration;
  window.openRegistration=function(){if(session()){oo&&oo.apply(this,arguments);return}open('signup')};
  
  function auto(){var p=null;try{p=sessionStorage.getItem('ac_p')}catch(e){}
-  if(!p&&!session()&&localStorage.getItem('camp_was_out')==='1'){try{sessionStorage.setItem('ac_p','1')}catch(e){}setTimeout(function(){open('signup')},1400)}}
+  if(!p&&!session()&&localStorage.getItem('camp_was_out')==='1'){try{sessionStorage.setItem('ac_p','1')}catch(e){}setTimeout(function(){open('login')},1400)}}
  if(document.readyState==='complete')auto();else window.addEventListener('load',auto);
 })();
 </script>
