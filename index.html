@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+<script id="camp-reset-20261004">
+/* REMISE À ZÉRO UNIQUE (fin de la phase de test) : efface les comptes, sessions et
+   pré-inscriptions enregistrés dans le navigateur, une seule fois par appareil. */
+(function(){
+  try{
+    var STAMP='camp_reset_20261004';
+    if(localStorage.getItem(STAMP))return;
+    var ks=[],i,k;
+    for(i=0;i<localStorage.length;i++){k=localStorage.key(i);if(k&&(/^camp_/i.test(k)||/^sb-.*-auth-token/.test(k)||/^supabase\./.test(k)))ks.push(k)}
+    ks.forEach(function(x){try{localStorage.removeItem(x)}catch(e){}});
+    try{sessionStorage.clear()}catch(e){}
+    localStorage.setItem(STAMP,'1');
+  }catch(e){}
+})();
+</script>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ff6500">
@@ -14335,8 +14351,12 @@ html.cd-tm #cvBar{display:none!important}
  document.body.appendChild(bar);
  var btn=bar.querySelector('#cvB');
  btn.onclick=function(){window.campGateOpen&&campGateOpen()};
- function refreshBtn(){bar.style.display=sess()?'none':'flex'}
- refreshBtn();setInterval(refreshBtn,1500);
+ /* le bouton flottant disparaît : dès que l'écran de création de compte / connexion / vérification est ouvert, et une fois le compte créé (session active) */
+ function uiOpen(){return !!document.querySelector('.ac,.vf,#authScreen.open,.registration-overlay.open,.registration-overlay.show,.registration-overlay.active')}
+ function refreshBtn(){bar.style.display=(sess()||uiOpen())?'none':'flex'}
+ refreshBtn();setInterval(refreshBtn,400);
+ try{new MutationObserver(refreshBtn).observe(document.body,{childList:true,subtree:false})}catch(e){}
+ window.addEventListener('storage',refreshBtn);
  var DST=[];
  function esc(t){return String(t).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
  function stats(){sb.rpc('camp_stats').then(function(r){if(r&&r.data){DST=r.data.par_district||[];window.__cvDst=DST;window.__cvTotal=r.data.inscrits;document.querySelectorAll('.cv-em').forEach(function(e){var z=DST.filter(function(x){return String(x.district).toLowerCase()===String(e.dataset.dn).toLowerCase()})[0],b=e.querySelector('.cv-n');if(z&&b)b.textContent=Math.max(+b.textContent||0,z.n)})}})}
