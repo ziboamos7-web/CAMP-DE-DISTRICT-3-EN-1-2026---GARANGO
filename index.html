@@ -14538,4 +14538,20 @@ html.cd-tm #cvBar{display:none!important}
 #v193Plus .p-lo-card .p-row i{background:#d62f3a!important}
 #v193Plus .p-lo-card .p-ch{background:#ffd3d8!important;color:#c92f3d!important}
 .p-sh{z-index:100006}
+/* Aucune session : le bouton « Se déconnecter » (nouveau et ancien) est masqué */
+html.camp-no-session #v193Plus .p-lo-card,
+html.camp-no-session #screenPlus .plus-logout,
+html.camp-no-session #screenPlus .camp-logout-visible{display:none!important}
 </style>
+<script id="logout-visibility-v1">
+(function(){
+  var de=document.documentElement;
+  function has(){try{var v=JSON.parse(localStorage.getItem('camp_session_2026'));return !!v}catch(e){return false}}
+  function upd(){de.classList.toggle('camp-no-session',!has())}
+  upd();
+  window.addEventListener('storage',upd);
+  document.addEventListener('DOMContentLoaded',upd);
+  window.addEventListener('load',upd);
+  setInterval(upd,400);
+})();
+</script>
