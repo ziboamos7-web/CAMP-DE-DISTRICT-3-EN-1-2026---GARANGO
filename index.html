@@ -6916,31 +6916,31 @@ document.addEventListener('DOMContentLoaded',render);window.addEventListener('lo
     var lo=$('authLogout');if(lo)lo.classList.toggle('show',!!acc);
   }
   window.campLogout=function(){
-    /* Déconnexion réelle : fermeture de la session locale ET de la session Supabase.
-       Après confirmation, l'utilisateur revient directement à l'écran Connexion. */
-    var finish=function(){
-      try{
-        [SES,REG,'camp_registration_draft','camp_registration_draft_2026','camp_avatar','camp_cover','camp_cover_src','camp_cover_t'].forEach(function(k){
-          try{localStorage.removeItem(k)}catch(e){}
-        });
-        try{localStorage.setItem('camp_was_out','1')}catch(e){}
-      }catch(e){}
-      try{window.dispatchEvent(new Event('storage'))}catch(e){}
-      try{if(window.closeRegistration)closeRegistration()}catch(e){}
-      paintProfile();
-      try{document.documentElement.classList.add('camp-gate')}catch(e){}
-      try{if(window.showAppTab)showAppTab('home')}catch(e){}
-      try{if(window.openAuth)window.openAuth('login')}catch(e){}
-      try{toast('Tu es déconnecté.')}catch(e){}
-      try{window.cdFx&&cdFx('logout')}catch(e){}
-    };
+    /* Déconnexion INSTANTANÉE : on nettoie l'appareil et on affiche l'écran Connexion tout de suite.
+       La fermeture de session Supabase part en arrière-plan (4 s max) : l'interface n'attend plus le réseau. */
+    if(window.__campLoggingOut)return;
+    window.__campLoggingOut=true;
+    try{
+      [SES,REG,'camp_registration_draft','camp_registration_draft_2026','camp_avatar','camp_cover','camp_cover_src','camp_cover_t'].forEach(function(k){
+        try{localStorage.removeItem(k)}catch(e){}
+      });
+      try{localStorage.setItem('camp_was_out','1')}catch(e){}
+    }catch(e){}
+    try{if(window.closeRegistration)closeRegistration()}catch(e){}
+    try{document.querySelectorAll('.p-sh,.pp').forEach(function(n){n.remove()})}catch(e){}
+    try{window.dispatchEvent(new Event('storage'))}catch(e){}
+    try{paintProfile()}catch(e){}
+    try{if(window.showAppTab)showAppTab('home')}catch(e){}
+    try{if(window.openAuth)window.openAuth('login')}catch(e){}
+    try{toast('Tu es déconnecté.')}catch(e){}
+    var release=function(){setTimeout(function(){window.__campLoggingOut=false},1500)};
     try{
       if(window.CampBackend&&typeof window.CampBackend.signOut==='function'){
-        Promise.resolve(window.CampBackend.signOut()).then(finish).catch(finish);
+        Promise.race([Promise.resolve(window.CampBackend.signOut()),new Promise(function(r){setTimeout(r,4000)})]).catch(function(){}).then(release);
         return;
       }
     }catch(e){}
-    finish();
+    release();
   };
 
   /* ---------- connexion ---------- */
@@ -12257,11 +12257,11 @@ html.v187-calm *,html.v187-calm *::before,html.v187-calm *::after{animation:none
       busy=true;o.classList.add('busy');x.disabled=true;
       x.innerHTML='<span class="p-spin"></span>Déconnexion…';
       try{if(navigator.vibrate&&(LS('camp_set_vibr')||'1')==='1')navigator.vibrate(20)}catch(_){}
+      document.removeEventListener('keydown',onKey);o.remove();
       setTimeout(function(){
-        shut();
         if(window.campLogout)window.campLogout();
         else if(window.plusLogout)plusLogout();
-      },350);
+      },0);
     }
   });
   document.addEventListener('keydown',onKey);
@@ -14175,9 +14175,13 @@ body #screenMatchs .champ-stats span{display:block;margin-top:6px!important;font
   }, true);
 
   /* Déconnexion locale → déconnexion en ligne (évite d'écrire sous le mauvais compte) */
-  var rmItem = Storage.prototype.removeItem;
+  var rmItem = Storage.prototype.removeItem, lastSO = 0;
   Storage.prototype.removeItem = function (k) {
-    if (k === SES) { try { sb.auth.signOut(); } catch (e) {} }
+    /* garde anti-boucle : pas de nouveau signOut() si une déconnexion est déjà en cours / vient d'avoir lieu */
+    if (k === SES && !window.__campLoggingOut && Date.now() - lastSO > 5000) {
+      lastSO = Date.now();
+      try { Promise.resolve(sb.auth.signOut()).catch(function () {}); } catch (e) {}
+    }
     return rmItem.apply(this, arguments);
   };
 
@@ -14524,3 +14528,14 @@ html.cd-tm #cvBar{display:none!important}
  stats();pull();pullFil();migrate();setInterval(function(){stats();pull();pullFil();migrate()},45000);setTimeout(migrate,4000)
 })();
 </script>
+
+<style id="logout-fix-v1">
+/* Bouton « Se déconnecter » : toujours visible et nettement distinct des autres lignes */
+#v193Plus .p-lo-card{display:block!important;visibility:visible!important;opacity:1!important;margin-top:22px!important;border:2px solid #e4545f!important;background:#fff1f2!important;border-radius:18px!important;box-shadow:0 10px 24px rgba(201,47,61,.18)!important}
+#v193Plus .p-lo-card .p-row{background:linear-gradient(135deg,#fff1f2,#ffe1e4)!important;min-height:68px!important}
+#v193Plus .p-lo-card .p-row b{color:#b3202d!important;font-weight:900!important}
+#v193Plus .p-lo-card .p-row small{color:#c06068!important}
+#v193Plus .p-lo-card .p-row i{background:#d62f3a!important}
+#v193Plus .p-lo-card .p-ch{background:#ffd3d8!important;color:#c92f3d!important}
+.p-sh{z-index:100006}
+</style>
